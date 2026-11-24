@@ -9,14 +9,19 @@
     "lint": "eslint",
     "check:layout": "node scripts/check-layout.mjs",
     "check:controls": "node scripts/check-controls.mjs",
+    "test": "vitest run",
     "check:rounding": "tsx scripts/check-rounding.ts",
     "check:login": "node scripts/check-login.mjs",
     "check:pwa": "node scripts/check-pwa.mjs"
   },
   "dependencies": {
+    "@types/pg": "^8.23.1",
+    "@vercel/blob": "^2.9.0",
     "leaflet": "^1.9.4",
     "lucide-react": "^1.72.0",
     "next": "16.4.6",
+    "pdf-lib": "^1.17.1",
+    "pg": "^8.23.1",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "react-leaflet": "^5.0.0",
@@ -33,6 +38,7 @@
     "playwright": "^1.65.1",
     "tailwindcss": "4.3.3",
     "tsx": "^4.23.15",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^3.2.7"
   }
 }

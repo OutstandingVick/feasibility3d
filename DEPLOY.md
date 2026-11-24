@@ -1,5 +1,84 @@
 # Feasibility3D — Deployment guide
 
+> **Vercel only (current).** The engine has been ported to TypeScript and runs
+> *inside* the Next.js app as route handlers under `app/app/api/`. There is no
+> separate FastAPI process any more — the whole product deploys to **Vercel**
+> with **Neon** (Postgres) for storage and **Vercel Blob** for evidence/PDFs.
+> See **Vercel only** below. The Python `engine/` directory remains only as the
+> reference implementation; the app no longer proxies to it.
+
+---
+
+## Vercel only (recommended)
+
+### 1. Create the Neon database
+
+1. **Neon** → *New project* → copy the connection string.
+2. Set it as `DATABASE_URL` on Vercel. The schema (pipelines, spills, evidence,
+   audit_log, contacts, users, written_reports, report_templates) is created
+   automatically on first request (`CREATE TABLE IF NOT EXISTS`).
+
+### 2. Create the Blob store
+
+1. **Vercel** → project → *Storage* → *Create Blob store*.
+2. Copy a read/write token and set it as `BLOB_READ_WRITE_TOKEN`. With it set,
+   evidence and generated PDFs are stored in Vercel Blob; without it the code
+   falls back to the local filesystem (dev/tests only).
+
+### 3. Environment variables
+
+Set these on Vercel (Project → Settings → Environment Variables):
+
+| Variable | Purpose |
+|---|---|
+| `DATABASE_URL` | Neon Postgres connection string (storage). |
+| `BLOB_READ_WRITE_TOKEN` | Vercel Blob read/write token (evidence + PDFs). |
+| `COOKIE_SECRET` | Signs the session cookie. Generate with `openssl rand -hex 32`. |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | First-admin bootstrap (see below). |
+| `NEXT_PUBLIC_FEASIBILITY3D_API` | Leave as `/api` (same-origin; the app is the API). |
+| `COOKIE_SECURE` | `true` (HTTPS). |
+| `COOKIE_SAMESITE` | `lax` (same-origin). |
+
+**No CORS setup is needed** — the browser only talks to the app's own
+`/api`, so the session cookie is first-party (`SameSite=Lax; Secure`).
+
+### 4. Deploy
+
+1. **Vercel** → *New Project* → import the repo → **Root Directory:** `app`.
+2. Framework preset **Next.js**. Set the environment variables above.
+3. Deploy. `npm run build` (in `app/`) must pass before deployment.
+
+### 5. Create the first admin
+
+On a **fresh database** the app creates the first admin at startup from
+`ADMIN_EMAIL` + `ADMIN_PASSWORD` (idempotent — ignored once any user exists).
+Set both, deploy, then sign in at `https://<app>/*/login` (you are redirected to
+`/login` automatically). To add more users, insert into the `users` table with a
+PBKDF2 hash.
+
+### 6. Post-deploy checklist (run against the live app)
+
+1. **Health:** `curl https://<app>/api/health` → `{"status":"ok","auth_enabled":true}`.
+2. **Login:** in the browser, open the app → redirected to `/login` → sign in
+   with the first admin → dashboard.
+3. **Run analysis:** click *Run analysis* (or `POST /api/analyze`) → returns
+   `detected: true` with a `spill_id`.
+4. **Verify:** `GET /api/verify` → `{"repeatable": true, "report_hash": "sha256:…"}`;
+   `GET /api/audit/verify` → `{"ok": true, "entries": N}`.
+5. **Download a report:** `GET /api/report.pdf` → `200` `application/pdf`.
+
+---
+
+## Legacy (Python engine) — reference only
+
+The remainder of this document describes deploying the original Python
+(FastAPI + SQLite) engine and is kept for reference. The TypeScript engine
+above is the current deployment path.
+
+---
+
+# Feasibility3D — Deployment guide (legacy)
+
 This guide covers deploying the **engine** (FastAPI + SQLite) and the **app**
 (Next.js) together. Two fully-tested topologies are described:
 

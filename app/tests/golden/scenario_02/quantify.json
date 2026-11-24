@@ -1,0 +1,16 @@
+{
+  "cross_check": "steady_state_average",
+  "equivalent_hole_mm": 10.0,
+  "leak_rate_m3s": 0.00496,
+  "method": "mass_balance",
+  "methods_agree_pct": 0.21,
+  "pressure_at_leak_bar": 45.13,
+  "uncertainty_pct": 6.1,
+  "volume_bbl": 4942,
+  "volume_m3": 785.7,
+  "volume_range_m3": [
+    737.7,
+    833.6
+  ],
+  "volume_steady_m3": 787.3
+}
