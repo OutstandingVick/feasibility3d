@@ -2,7 +2,7 @@
  * Ports of the DB-layer tests from the Python engine (test_db.py): status
  * workflow, audit-chain tamper detection, and idempotent analysis saving.
  */
-import { Pool } from "pg";
+import { Pool, type PoolClient } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { initSchema, log, saveAnalysis, setStatus, verifyAuditChain } from "../../lib/server/db";
 
@@ -12,7 +12,7 @@ process.env.DATABASE_URL = DATABASE_URL;
 
 const pool = new Pool({ connectionString: DATABASE_URL, max: 8 });
 
-let client: Awaited<ReturnType<typeof pool.connect>>;
+let client: PoolClient;
 
 beforeAll(async () => {
   await initSchema();

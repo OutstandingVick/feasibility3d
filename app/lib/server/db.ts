@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Postgres storage layer, ported from engine/db.py.
  *
@@ -6,9 +7,13 @@
  * `pg_advisory_xact_lock` instead of a process lock, so it is safe across many
  * serverless instances (the thread lock in db.py only works inside one uvicorn
  * process).
+ *
+ * ``any`` is used deliberately for dynamic Postgres rows and JSON (spill
+ * analysis payloads, audit details) that have no static shape at this layer.
  */
 import { Pool, type PoolClient } from "pg";
 import { auditEntryHash, canonicalDumps } from "../engine/hash";
+import { hashPassword } from "./auth";
 
 function nowUtc(): string {
   return new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
@@ -114,6 +119,29 @@ export async function initSchema(): Promise<void> {
   });
 }
 
+let schemaPromise: Promise<void> | null = null;
+
+/** Idempotent, memoised schema creation + first-admin bootstrap. */
+export function ensureSchema(): Promise<void> {
+  if (!schemaPromise) {
+    schemaPromise = (async () => {
+      await initSchema();
+      // Bootstrap the first admin from env when the users table is empty.
+      const email = (process.env.ADMIN_EMAIL ?? "").trim();
+      const password = process.env.ADMIN_PASSWORD ?? "";
+      if (email && password) {
+        await withClient(async (client) => {
+          await bootstrapAdmin(client, email, hashPassword(password));
+        });
+      }
+    })().catch((e) => {
+      schemaPromise = null;
+      throw e;
+    });
+  }
+  return schemaPromise;
+}
+
 // --- Audit chain ---------------------------------------------------------
 
 /**
@@ -203,7 +231,7 @@ function nextSpillId(lastId: string | null): string {
 /** Persist a detected analysis as a spill record; idempotent on report_hash. */
 export async function saveAnalysis(
   client: PoolClient,
-  response: Record<string, any>,
+  response: any,
   actor = "demo-regulator",
 ): Promise<string | null> {
   if (!response.detected) {
@@ -422,6 +450,49 @@ export async function notifications(client: PoolClient): Promise<any[]> {
   }
   items.sort((a, b) => (a.at < b.at ? 1 : -1));
   return items;
+}
+
+// --- Users ---------------------------------------------------------------
+
+export async function userCount(client: PoolClient): Promise<number> {
+  const { rows } = await client.query("SELECT COUNT(*)::int AS n FROM users");
+  return rows[0].n;
+}
+
+export async function getUserByEmail(client: PoolClient, email: string): Promise<any | null> {
+  const { rows } = await client.query("SELECT * FROM users WHERE email = $1", [email]);
+  return rows[0] ?? null;
+}
+
+export async function getUserById(client: PoolClient, id: number): Promise<any | null> {
+  const { rows } = await client.query("SELECT * FROM users WHERE id = $1", [id]);
+  return rows[0] ?? null;
+}
+
+export async function createUser(
+  client: PoolClient,
+  email: string,
+  passwordHash: string,
+  role: string,
+  actor = "system",
+): Promise<any> {
+  return withAuditLock(client, async () => {
+    const normalized = email.trim().toLowerCase();
+    if (!normalized) throw new Error("email is required");
+    const existing = await client.query("SELECT id FROM users WHERE email = $1", [normalized]);
+    if (existing.rows.length > 0) throw new Error("a user with that email already exists");
+    const { rows } = await client.query(
+      "INSERT INTO users (email, password_hash, role, created_at) VALUES ($1,$2,$3,$4) RETURNING *",
+      [normalized, passwordHash, role, nowUtc()],
+    );
+    await logLocked(client, null, "user_created", actor, { email: normalized, role });
+    return rows[0];
+  });
+}
+
+export async function bootstrapAdmin(client: PoolClient, email: string, passwordHash: string): Promise<any | null> {
+  if ((await userCount(client)) > 0) return null;
+  return createUser(client, email, passwordHash, "admin", "system");
 }
 
 // --- Contacts ------------------------------------------------------------
