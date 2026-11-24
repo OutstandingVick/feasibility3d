@@ -9,6 +9,7 @@
     "lint": "eslint",
     "check:layout": "node scripts/check-layout.mjs",
     "check:controls": "node scripts/check-controls.mjs",
+    "test": "vitest run",
     "check:rounding": "tsx scripts/check-rounding.ts",
     "check:login": "node scripts/check-login.mjs",
     "check:pwa": "node scripts/check-pwa.mjs"
@@ -33,6 +34,7 @@
     "playwright": "^1.65.1",
     "tailwindcss": "4.3.3",
     "tsx": "^4.23.15",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^3.2.7"
   }
 }
