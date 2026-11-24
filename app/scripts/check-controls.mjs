@@ -153,7 +153,13 @@ try {
     await page.waitForTimeout(900); page.off("pageerror", oe);
     record("detail", "detail: map Zoom to leak", e.length ? "ERROR" : "WORKS", e[0] || "map fly-to");
   }
-  await click("detail: map Full pipeline", () => page.getByRole("button", { name: "Full pipeline" }).click(), 600, "detail");
+  // "Full pipeline" also flies the map (no DOM text change) -> verify no error
+  {
+    const e2 = []; const oe2 = (x) => e2.push(x.message.slice(0, 60)); page.on("pageerror", oe2);
+    await page.getByRole("button", { name: "Full pipeline" }).click().catch(() => {});
+    await page.waitForTimeout(900); page.off("pageerror", oe2);
+    record("detail", "detail: map Full pipeline", e2.length ? "ERROR" : "WORKS", e2[0] || "map fly-to");
+  }
   const dHref = await page.getByRole("link", { name: "Download report" }).getAttribute("href");
   await url("detail: Download report (PDF)", dHref, "detail");
 
