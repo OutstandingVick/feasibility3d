@@ -110,6 +110,28 @@ CREATE TABLE IF NOT EXISTS users (
   role TEXT NOT NULL DEFAULT 'regulator',
   created_at TEXT
 );
+CREATE TABLE IF NOT EXISTS written_reports (
+  id BIGSERIAL PRIMARY KEY,
+  spill_id TEXT,
+  kind TEXT NOT NULL,
+  title TEXT,
+  fields_json TEXT,
+  sections_json TEXT,
+  template_id INTEGER,
+  sha256 TEXT,
+  created_by TEXT,
+  created_at TEXT
+);
+CREATE TABLE IF NOT EXISTS report_templates (
+  id BIGSERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  fields_json TEXT,
+  sections_json TEXT,
+  created_by TEXT,
+  created_at TEXT,
+  deleted_at TEXT
+);
 CREATE INDEX IF NOT EXISTS idx_audit_spill ON audit_log (spill_id);
 CREATE INDEX IF NOT EXISTS idx_evidence_spill ON evidence (spill_id);
 `;
@@ -220,6 +242,36 @@ export async function verifyAuditChain(client: PoolClient): Promise<AuditVerific
     prevHash = row.entry_hash;
   }
   return { ok: brokenAt === null, entries: rows.length, broken_at: brokenAt };
+}
+
+// --- Pipelines -----------------------------------------------------------
+
+export async function upsertPipeline(client: PoolClient, scenario: { name: string; pipeline: any }): Promise<void> {
+  const p = scenario.pipeline ?? {};
+  await client.query(
+    `INSERT INTO pipelines (id, name, type, length_m, inner_diameter_m, terrain_at_leak, route_json, created_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+     ON CONFLICT (id) DO UPDATE SET name=EXCLUDED.name, type=EXCLUDED.type,
+       length_m=EXCLUDED.length_m, inner_diameter_m=EXCLUDED.inner_diameter_m,
+       terrain_at_leak=EXCLUDED.terrain_at_leak, route_json=EXCLUDED.route_json`,
+    [
+      p.id,
+      scenario.name,
+      p.type,
+      p.length_m,
+      p.inner_diameter_m,
+      p.terrain_at_leak,
+      JSON.stringify(p.route_lonlat ?? []),
+      nowUtc(),
+    ],
+  );
+}
+
+export async function listPipelines(client: PoolClient): Promise<any[]> {
+  const { rows } = await client.query(
+    "SELECT id, name, type, length_m, inner_diameter_m, terrain_at_leak, created_at FROM pipelines ORDER BY id",
+  );
+  return rows;
 }
 
 // --- Spills --------------------------------------------------------------
@@ -541,6 +593,58 @@ export async function getEvidence(client: PoolClient, spillId: string, evidenceI
     spillId,
   ]);
   return rows[0] ?? null;
+}
+
+// --- Report history (generated PDFs) -------------------------------------
+
+export async function recordReport(
+  client: PoolClient,
+  reportType: string,
+  params: Record<string, unknown>,
+  pdfBytes: Buffer,
+  actor: string,
+): Promise<any> {
+  const sha = sha256Bytes(pdfBytes);
+  const { putBlob } = await import("./blob");
+  const location = await putBlob(sha, pdfBytes, "application/pdf");
+  const detail = { type: reportType, params, sha256: "sha256:" + sha, location };
+  await log(client, params.spill_id as string | null, "report_generated", actor, detail);
+  const { rows } = await client.query(
+    "SELECT * FROM audit_log WHERE action = 'report_generated' ORDER BY id DESC LIMIT 1",
+  );
+  return historyItem(rows[0]);
+}
+
+function historyItem(row: any): any {
+  const detail = row?.detail_json ? JSON.parse(row.detail_json) : {};
+  return {
+    id: row.id,
+    type: detail.type,
+    params: detail.params ?? {},
+    sha256: detail.sha256,
+    actor: row.actor,
+    at: row.at,
+    spill_id: row.spill_id,
+  };
+}
+
+export async function reportHistory(client: PoolClient, limit = 50): Promise<any[]> {
+  const { rows } = await client.query(
+    "SELECT * FROM audit_log WHERE action = 'report_generated' ORDER BY id DESC LIMIT $1",
+    [limit],
+  );
+  return rows.map(historyItem);
+}
+
+export async function reportFile(client: PoolClient, entryId: number): Promise<Buffer | null> {
+  const { rows } = await client.query(
+    "SELECT * FROM audit_log WHERE id = $1 AND action = 'report_generated'",
+    [entryId],
+  );
+  if (rows.length === 0) return null;
+  const detail = rows[0].detail_json ? JSON.parse(rows[0].detail_json) : {};
+  if (!detail.location) return null;
+  return (await import("./blob")).getBlob(detail.location);
 }
 
 // --- Contacts ------------------------------------------------------------
