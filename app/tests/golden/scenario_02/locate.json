@@ -1,0 +1,16 @@
+{
+  "averages": {
+    "p_in_bar": 49.65216577540109,
+    "p_out_bar": 37.02559243697477,
+    "q_in_m3s": 0.10173663865546209,
+    "q_out_m3s": 0.09678943086325448
+  },
+  "location_lonlat": [
+    6.2422,
+    4.87837
+  ],
+  "location_m": 6761.5,
+  "location_uncertainty_m": 1758,
+  "window_end": "2026-11-05T09:54:00Z",
+  "window_start": "2026-11-03T14:17:00Z"
+}

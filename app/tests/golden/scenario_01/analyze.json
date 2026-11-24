@@ -1,0 +1,194 @@
+{
+  "baseline": {
+    "p_in_bar": 49.999,
+    "p_out_bar": 37.026,
+    "q_in_m3s": 0.09999,
+    "q_out_m3s": 0.1,
+    "window_end": "2026-11-02T23:59:00Z",
+    "window_start": "2026-11-01T00:00:00Z"
+  },
+  "detected": true,
+  "impact": {
+    "center_lonlat": [
+      6.21493,
+      4.80446
+    ],
+    "hours_modelled": 6,
+    "model": "fay_spreading+drift",
+    "polygon_lonlat": [
+      [
+        6.21493,
+        4.80905
+      ],
+      [
+        6.21583,
+        4.80896
+      ],
+      [
+        6.21668,
+        4.8087
+      ],
+      [
+        6.21747,
+        4.80827
+      ],
+      [
+        6.21817,
+        4.8077
+      ],
+      [
+        6.21873,
+        4.80701
+      ],
+      [
+        6.21916,
+        4.80622
+      ],
+      [
+        6.21942,
+        4.80536
+      ],
+      [
+        6.2195,
+        4.80446
+      ],
+      [
+        6.21942,
+        4.80357
+      ],
+      [
+        6.21916,
+        4.80271
+      ],
+      [
+        6.21873,
+        4.80191
+      ],
+      [
+        6.21817,
+        4.80122
+      ],
+      [
+        6.21747,
+        4.80065
+      ],
+      [
+        6.21668,
+        4.80023
+      ],
+      [
+        6.21583,
+        4.79996
+      ],
+      [
+        6.21493,
+        4.79988
+      ],
+      [
+        6.21404,
+        4.79996
+      ],
+      [
+        6.21319,
+        4.80023
+      ],
+      [
+        6.2124,
+        4.80065
+      ],
+      [
+        6.2117,
+        4.80122
+      ],
+      [
+        6.21113,
+        4.80191
+      ],
+      [
+        6.21071,
+        4.80271
+      ],
+      [
+        6.21045,
+        4.80357
+      ],
+      [
+        6.21036,
+        4.80446
+      ],
+      [
+        6.21045,
+        4.80536
+      ],
+      [
+        6.21071,
+        4.80622
+      ],
+      [
+        6.21113,
+        4.80701
+      ],
+      [
+        6.2117,
+        4.8077
+      ],
+      [
+        6.2124,
+        4.80827
+      ],
+      [
+        6.21319,
+        4.8087
+      ],
+      [
+        6.21404,
+        4.80896
+      ],
+      [
+        6.21493,
+        4.80905
+      ]
+    ],
+    "slick_area_m2": 807237,
+    "slick_radius_m": 507.0,
+    "type": "water",
+    "volume_spread_m3": 625.1
+  },
+  "leak": {
+    "detected_at": "2026-11-03T14:05:00Z",
+    "duration_hours": 44.15,
+    "estimated_start": "2026-11-03T14:01:00Z",
+    "location_lonlat": [
+      6.22226,
+      4.82466
+    ],
+    "location_m": 13390.2,
+    "location_uncertainty_m": 325,
+    "pipeline_type": "trunk_line",
+    "shut_in_at": "2026-11-05T10:10:00Z",
+    "terrain": "water"
+  },
+  "pipeline_id": "BYS-TL-01",
+  "quantification": {
+    "cross_check": "steady_state_average",
+    "equivalent_hole_mm": 25.0,
+    "leak_rate_m3s": 0.02894,
+    "method": "mass_balance",
+    "methods_agree_pct": 0.19,
+    "pressure_at_leak_bar": 39.64,
+    "uncertainty_pct": 5.2,
+    "volume_bbl": 28880,
+    "volume_m3": 4591.6,
+    "volume_range_m3": [
+      4352.8,
+      4830.4
+    ],
+    "volume_steady_m3": 4600.5
+  },
+  "report": {
+    "generated_at": "2026-11-24T10:51:55Z",
+    "input_hash": "sha256:3fb8a030cdf0e8c4c1ba5717b0e08fe3c367cb18ff8eb35786e249a9154a2cad",
+    "method_version": "feasibility3d-method v0.1",
+    "report_hash": "sha256:39448a21bb2e1eb898bc8b70d8683dffb23d6fbd18b4d2faf77906a469f7a92e"
+  }
+}
