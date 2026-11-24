@@ -14,6 +14,7 @@
 import { Pool, type PoolClient } from "pg";
 import { auditEntryHash, canonicalDumps } from "../engine/hash";
 import { hashPassword } from "./auth";
+import { sha256Bytes } from "./blob";
 
 function nowUtc(): string {
   return new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
@@ -493,6 +494,53 @@ export async function createUser(
 export async function bootstrapAdmin(client: PoolClient, email: string, passwordHash: string): Promise<any | null> {
   if ((await userCount(client)) > 0) return null;
   return createUser(client, email, passwordHash, "admin", "system");
+}
+
+// --- Evidence ------------------------------------------------------------
+
+export const MAX_EVIDENCE_BYTES = 10 * 1024 * 1024;
+export const ALLOWED_CONTENT_TYPES = new Set(["image/jpeg", "image/png", "application/pdf", "text/csv"]);
+
+export function safeFilename(name: string): string {
+  return (name || "").replace(/\\/g, "/").split("/").pop() || "file";
+}
+
+export async function addEvidence(
+  client: PoolClient,
+  spillId: string,
+  filename: string,
+  contentType: string,
+  dataBytes: Buffer,
+  note: string | null,
+  actor: string,
+): Promise<any> {
+  if (dataBytes.length > MAX_EVIDENCE_BYTES) {
+    throw Object.assign(new Error("file too large"), { status: 413 });
+  }
+  if (!ALLOWED_CONTENT_TYPES.has(contentType)) {
+    throw Object.assign(new Error("unsupported content type"), { status: 415 });
+  }
+  const safe = safeFilename(filename);
+  const sha = sha256Bytes(dataBytes);
+  const { putBlob } = await import("./blob");
+  const location = await putBlob(sha, dataBytes, contentType);
+  return withAuditLock(client, async () => {
+    const { rows } = await client.query(
+      `INSERT INTO evidence (spill_id, filename, content_type, size_bytes, sha256, stored_path, note, uploaded_by, uploaded_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+      [spillId, safe, contentType, dataBytes.length, sha, location, note ?? null, actor, nowUtc()],
+    );
+    await logLocked(client, spillId, "evidence_added", actor, { sha256: sha, filename: safe });
+    return rows[0];
+  });
+}
+
+export async function getEvidence(client: PoolClient, spillId: string, evidenceId: number): Promise<any | null> {
+  const { rows } = await client.query("SELECT * FROM evidence WHERE id = $1 AND spill_id = $2", [
+    evidenceId,
+    spillId,
+  ]);
+  return rows[0] ?? null;
 }
 
 // --- Contacts ------------------------------------------------------------
