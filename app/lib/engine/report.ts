@@ -3,8 +3,8 @@
  * /analyze contract response with tamper-evident SHA-256 hashes.
  */
 import { canonicalHash, sha256Hex } from "./hash";
-import { detect, parseReadings, type Detection } from "./detect";
-import { locateLeak, type Location } from "./locate";
+import { detect, parseReadings } from "./detect";
+import { locateLeak } from "./locate";
 import { quantify, type Quantification } from "./quantify";
 import { estimateImpact, type Impact } from "./impact";
 import { pyRound } from "./rounding";

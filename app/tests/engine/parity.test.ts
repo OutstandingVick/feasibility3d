@@ -46,7 +46,7 @@ function assertClose(actual: unknown, expected: unknown, path: string): void {
       // generated_at is wall-clock time; it varies per run and is excluded
       // from the report hash, so it is not part of the parity contract.
       if (k === "generated_at") continue;
-      assertClose((actual as Any)[k], expected[k], `${path}.${k}`);
+      assertClose((actual as Any)[k], (expected as Any)[k], `${path}.${k}`);
     }
     return;
   }
